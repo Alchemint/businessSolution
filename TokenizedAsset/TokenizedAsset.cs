@@ -13,7 +13,7 @@ namespace ServiceContract
     {
 
         //Default multiple signature committee account
-        private static readonly byte[] committee = Helper.ToScriptHash("AaBmSJ4Beeg2AeKczpXk89DnmVrPn3SHkU");
+        private static readonly byte[] committee = Helper.ToScriptHash("AZ77FiX7i9mRUPF2RyuJD2L8kS6UDnQ9Y7");
 
         //Static param
         private const string CALL_ACCOUNT = "call_account";
@@ -79,15 +79,6 @@ namespace ServiceContract
                     byte[] from = (byte[])args[1];
                     byte[] to = (byte[])args[2];
                     BigInteger amount = (BigInteger)args[3];
-
-                    if (from.Length != 20 || to.Length != 20)
-                        throw new InvalidOperationException("The parameters from and to SHOULD be 20-byte addresses.");
-
-                    if (amount <= 0)
-                        throw new InvalidOperationException("The parameter amount MUST be greater than 0.");
-
-                    if (!Runtime.CheckWitness(from) && from.AsBigInteger() != callscript.AsBigInteger())
-                        return false;
 
                     return transfer(name, from, to, amount);
                 }

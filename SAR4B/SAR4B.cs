@@ -11,7 +11,7 @@ namespace SAR4B
     public class SAR4B : SmartContract
     {
         //Default multiple signature committee account
-        private static readonly byte[] committee = Helper.ToScriptHash("AaBmSJ4Beeg2AeKczpXk89DnmVrPn3SHkU");
+        private static readonly byte[] committee = Helper.ToScriptHash("AZ77FiX7i9mRUPF2RyuJD2L8kS6UDnQ9Y7");
 
         public delegate object NEP5Contract(string method, object[] args);
 
@@ -814,49 +814,6 @@ namespace SAR4B
 
             SARInfo info = (SARInfo)Helper.Deserialize(sar);
 
-            byte[] oracleAssetID = Storage.Get(Storage.CurrentContext, getAccountKey(ORACLE_ACCOUNT.AsByteArray()));
-            byte[] sdsAssetID = Storage.Get(Storage.CurrentContext, getAccountKey(SDS_ACCOUNT.AsByteArray()));
-            byte[] tokenizedAssetID = Storage.Get(Storage.CurrentContext, getAccountKey(TOKENIZED_ACCOUNT.AsByteArray()));
-            byte[] to = ExecutionEngine.ExecutingScriptHash;
-
-            object[] arg = new object[1];
-            arg[0] = info.name;
-
-            var TokenizedContract = (NEP5Contract)tokenizedAssetID.ToDelegate();
-            string str = (string)TokenizedContract("name", arg);
-            if (str.Length > 0)
-                throw new InvalidOperationException("The name must be null.");
-
-            BigInteger serviceFree = 1000000000;
-            {
-                var OracleContract = (NEP5Contract)oracleAssetID.ToDelegate();
-
-                arg = new object[1];
-                arg[0] = SERVICE_FEE;
-                BigInteger re = (BigInteger)OracleContract("getTypeA", arg);
-                if (re != 0)
-                    serviceFree = re;
-            }
-
-            arg = new object[3];
-            arg[0] = addr;
-            arg[1] = to;
-            arg[2] = serviceFree;
-
-            var SDSContract = (NEP5Contract)sdsAssetID.ToDelegate();
-            if (!(bool)SDSContract("transfer", arg)) throw new InvalidOperationException("The operation is exception.");
-
-            info.locked = info.locked + serviceFree;
-
-            arg = new object[4];
-            arg[0] = info.name;
-            arg[1] = info.symbol;
-            arg[2] = info.decimals;
-            arg[3] = addr;
-
-            var TokenizedContract2 = (NEP5Contract)tokenizedAssetID.ToDelegate();
-            if (!(bool)TokenizedContract2("init", arg)) throw new InvalidOperationException("The operation is exception.");
-
             Storage.Put(Storage.CurrentContext, key, Helper.Serialize(info));
 
             var txid = ((Transaction)ExecutionEngine.ScriptContainer).Hash;
@@ -874,52 +831,9 @@ namespace SAR4B
             if (value <= 0)
                 throw new InvalidOperationException("The parameter is exception.");
 
-            //check SAR 
-            if (!checkState(SAR_STATE))
-                throw new InvalidOperationException("The sar state MUST be pause.");
 
-            var key = getSARKey(addr);
-            byte[] sar = Storage.Get(Storage.CurrentContext, key);
-            if (sar.Length == 0) throw new InvalidOperationException("The sar must not be null.");
-
-            byte[] sdsAssetID = Storage.Get(Storage.CurrentContext, getAccountKey(SDS_ACCOUNT.AsByteArray()));
-
-            SARInfo info = (SARInfo)Helper.Deserialize(sar);
-
-            if (info.owner.AsBigInteger() != addr.AsBigInteger())
-                throw new InvalidOperationException("The parameter is exception.");
-
-            if (info.status == (int)ConfigSARStatus.SAR_STATUS_CLOSE)
-                throw new InvalidOperationException("The parameter is exception.");
-
-            byte[] to = ExecutionEngine.ExecutingScriptHash;
-            object[] arg = new object[3];
-            arg[0] = addr;
-            arg[1] = to;
-            arg[2] = value;
-
-            var SDSContract = (NEP5Contract)sdsAssetID.ToDelegate();
-
-            if (!(bool)SDSContract("transfer", arg)) throw new InvalidOperationException("The operation is exception.");
-
-            var txid = ((Transaction)ExecutionEngine.ScriptContainer).Hash;
-
-            info.locked = info.locked + value;
-            BigInteger currLock = info.locked;
-            Storage.Put(Storage.CurrentContext, key, Helper.Serialize(info));
-
-            SARTransferDetail detail = new SARTransferDetail();
-            detail.from = addr;
-            detail.sarTxid = info.txid;
-            detail.type = (int)ConfigTranType.TRANSACTION_TYPE_RESERVE;
-            detail.operated = value;
-            detail.hasLocked = currLock;
-            detail.hasDrawed = info.hasDrawed;
-            detail.txid = txid;
-            Storage.Put(Storage.CurrentContext, getTxidKey(txid), Helper.Serialize(detail));
 
             //notify
-            Operated(info.name.AsByteArray(), addr, info.txid, txid, (int)ConfigTranType.TRANSACTION_TYPE_RESERVE, value);
             return true;
         }
 
